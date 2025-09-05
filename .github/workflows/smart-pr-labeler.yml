@@ -1,7 +1,6 @@
 name: Smart PR Labeler (change-type + content-type)
 
 on:
-  # Run in repository context so the token has write permissions
   pull_request_target:
     types: [opened, synchronize, reopened]
 
