@@ -1,7 +1,7 @@
 name: Smart PR Labeler (change-type + content-type)
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
               return;
             }
 
-            // fetch changed files on the PR (handles pagination)
+            // fetch changed files on the PR (via API) — safe for pull_request_target
             let page = 1;
             const per_page = 100;
             let allFiles = [];
@@ -45,19 +45,12 @@ jobs:
               return;
             }
 
-            // Determine change-type labels from file.status values:
-            // status is one of: added, modified, removed, renamed, changed (varies)
-            const changeTypeMap = {
-              added: "added",
-              modified: "modified",
-              removed: "deleted",
-              renamed: "renamed"
-            };
+            // Determine change-type labels
+            const changeTypeMap = { added: "added", modified: "modified", removed: "deleted", renamed: "renamed" };
             const changeLabels = new Set();
             for (const f of allFiles) {
               const st = (f.status || "").toLowerCase();
               if (changeTypeMap[st]) changeLabels.add(changeTypeMap[st]);
-              // sometimes 'changed' or other values appear — treat as modified
               if (st === "changed") changeLabels.add("modified");
             }
 
@@ -66,55 +59,29 @@ jobs:
             for (const f of allFiles) {
               const p = (f.filename || "").toLowerCase();
 
-              if (p.endsWith(".md") || p.startsWith("docs/") || p.includes("/docs/")) {
-                contentLabels.add("docs");
-              }
+              if (p.endsWith(".md") || p.startsWith("docs/") || p.includes("/docs/")) contentLabels.add("docs");
               if (p.endsWith(".sql")) contentLabels.add("sql");
-              if (p.endsWith(".py") || p.endsWith(".ipynb")) {
-                // ipynb often maps to Python, include python label
-                contentLabels.add("python");
-              }
-              if (p.includes("dbt/") || p.includes("models/") || p.endsWith(".sql.jinja") || p.endsWith(".yml") && p.includes("dbt")) {
-                contentLabels.add("dbt");
-              }
-              if (p.endsWith(".yml") || p.endsWith(".yaml") || p.startsWith(".github/") || p.includes("/.github/") || p.includes("workflow")) {
-                contentLabels.add("config");
-              }
-              if (p.includes("test_") || p.includes("/tests/") || p.endsWith(".spec.js") || p.endsWith(".test.py")) {
-                contentLabels.add("tests");
-              }
+              if (p.endsWith(".py") || p.endsWith(".ipynb")) contentLabels.add("python");
+              if (p.includes("dbt/") || p.includes("models/") || (p.endsWith(".sql.jinja") || (p.endsWith(".yml") && p.includes("dbt")))) contentLabels.add("dbt");
+              if (p.endsWith(".yml") || p.endsWith(".yaml") || p.startsWith(".github/") || p.includes("/.github/") || p.includes("workflow")) contentLabels.add("config");
+              if (p.includes("test_") || p.includes("/tests/") || p.endsWith(".spec.js") || p.endsWith(".test.py")) contentLabels.add("tests");
               if (p.endsWith(".json")) contentLabels.add("json");
               if (p.endsWith(".ipynb")) contentLabels.add("notebook");
-              if (p.endsWith(".mdx")) contentLabels.add("docs");
-              // add any other heuristics you like
             }
 
-            // Combine labels (changes + content). If none content labels found, fallback to 'other'
             const finalLabelsSet = new Set([...changeLabels, ...contentLabels]);
             if (finalLabelsSet.size === 0) finalLabelsSet.add("other");
-
             const finalLabels = Array.from(finalLabelsSet);
             core.info("Will apply labels: " + finalLabels.join(", "));
 
-            // Ensure labels exist in repo — create missing labels with default colors
-            // Color map to make labels visually distinct (hex, without #)
+            // Create missing labels if they don't exist
             const colorMap = {
-              added: "1abc9c",
-              modified: "f1c40f",
-              deleted: "e74c3c",
-              renamed: "9b59b6",
-              docs: "0366d6",
-              sql: "2b9348",
-              python: "3572A5",
-              dbt: "ff7b00",
-              config: "6f42c1",
-              tests: "dbb40c",
-              json: "f39c12",
-              notebook: "f5b041",
-              other: "95a5a6"
+              added: "1abc9c", modified: "f1c40f", deleted: "e74c3c", renamed: "9b59b6",
+              docs: "0366d6", sql: "2b9348", python: "3572A5", dbt: "ff7b00",
+              config: "6f42c1", tests: "dbb40c", json: "f39c12", notebook: "f5b041", other: "95a5a6"
             };
 
-            // fetch existing labels to avoid duplicates
+            // fetch existing labels
             let repoLabels = [];
             try {
               let pageL = 1;
@@ -132,9 +99,7 @@ jobs:
               if (!repoLabels.includes(lbl.toLowerCase())) {
                 try {
                   const color = colorMap[lbl] || "ededed";
-                  await github.rest.issues.createLabel({
-                    owner, repo, name: lbl, color, description: `Auto-created label: ${lbl}`
-                  });
+                  await github.rest.issues.createLabel({ owner, repo, name: lbl, color, description: `Auto-created label: ${lbl}` });
                   core.info(`Created label: ${lbl}`);
                 } catch (err) {
                   core.warning(`Could not create label ${lbl}: ${err.message}`);
@@ -142,13 +107,9 @@ jobs:
               }
             }
 
-            // Finally, add labels to the PR (issue)
+            // Apply labels to PR
             try {
-              await github.rest.issues.addLabels({
-                owner, repo,
-                issue_number: prNumber,
-                labels: finalLabels
-              });
+              await github.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: finalLabels });
               core.info("Labels added to PR #" + prNumber);
             } catch (err) {
               core.setFailed("Failed to add labels to PR: " + err.message);
