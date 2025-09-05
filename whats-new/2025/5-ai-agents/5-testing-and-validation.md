@@ -1,13 +1,18 @@
-# Snowflake AI Agents — Testing And Validation
+# Snowflake AI Agents — Testing & Validation
 
-This is the **testing-and-validation** section for **Snowflake AI Agents**.
+How to test correctness, performance, and governance.
+
+
+## Approaches
+- Unit tests (dbt tests or SQL assertions)
+- Integration tests (end-to-end pipelines)
+- Regression tests (compare metrics before/after)
+
+## Example assertion
+```sql
+select count(*) from analytics.customers where email is null;
+```
 
 ---
 
-```mermaid
-flowchart LR
-  A[Input] --> B[Process]
-  B --> C[Output]
-```
-
-Next: [6-...](./6-*.md)
+[Previous](./4-usage-and-scenarios.md) • [Next](./6-ci-cd-and-deployment.md)

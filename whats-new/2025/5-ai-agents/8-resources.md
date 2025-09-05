@@ -1,13 +1,14 @@
 # Snowflake AI Agents — Resources
 
-This is the **resources** section for **Snowflake AI Agents**.
+Curated links, guides, and further reading.
+
+- Official Snowflake docs
+- Release notes
+- Community blog posts
+
+Back to parent index: [2025 Index](../0-README.md)
+
 
 ---
 
-```mermaid
-flowchart LR
-  A[Input] --> B[Process]
-  B --> C[Output]
-```
-
-Next Topic: coming soon 🚀
+[Previous](./7-performance-and-best-practices.md) • [Back to 2025 index](../0-README.md)

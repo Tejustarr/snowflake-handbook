@@ -1,13 +1,14 @@
-# Snowflake AI Agents — Performance And Best Practices
+# Snowflake AI Agents — Performance & Best Practices
 
-This is the **performance-and-best-practices** section for **Snowflake AI Agents**.
+Tuning advice and operational playbooks.
+
+## Best Practices
+
+- Monitor query profiles, avoid unnecessary wide scans.
+- Use resource monitors to control credits.
+- Document change logs and runbooks.
+
 
 ---
 
-```mermaid
-flowchart LR
-  A[Input] --> B[Process]
-  B --> C[Output]
-```
-
-Next: [8-...](./8-*.md)
+[Previous](./6-ci-cd-and-deployment.md) • [Next](./8-resources.md)
