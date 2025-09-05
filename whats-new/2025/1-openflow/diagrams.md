@@ -16,16 +16,16 @@ This file contains several Mermaid diagrams illustrating common Openflow pipelin
 ```mermaid
 flowchart TD
   subgraph Sources
-    A1[Files (S3 / GCS / Blob)]
-    A2[Databases (SQL Server / MySQL)]
+    A1[Files: S3 / GCS / Blob]
+    A2[Databases: SQL Server / MySQL]
     A3[APIs / SaaS (REST)]
-    A4[Streaming (Kafka / Kinesis)]
+    A4[Streaming: Kafka / Kinesis]
   end
 
   subgraph Openflow
     B1[Connector / Ingest]
     B2[Processors / Transforms]
-    B3[Routing (to Stage or Direct)]
+    B3[Routing to Stage or Direct]
     B4[Monitoring / Alerts]
   end
 
@@ -70,15 +70,15 @@ flowchart LR
   end
 
   subgraph Snowflake
-    SStage["@db_cdc_stage"]
-    SStream["orders_stream (STREAM)"]
-    STable[orders (TABLE)]
+    Stage1[Stage: db_cdc_stage]
+    Stream1[orders_stream (STREAM)]
+    Table1[orders (TABLE)]
   end
 
-  DCDC --> OConn --> OProc --> OMunge --> OToSnow --> SStage
-  SStage -->|COPY / Snowpipe| STable
-  STable --> SStream
-  SStream -->|MERGE| STable
+  DCDC --> OConn --> OProc --> OMunge --> OToSnow --> Stage1
+  Stage1 -->|COPY / Snowpipe| Table1
+  Table1 --> Stream1
+  Stream1 -->|MERGE| Table1
 ```
 
 ---
@@ -99,14 +99,14 @@ flowchart TB
   end
 
   subgraph Snowflake
-    Stage["@kafka_stage"]
+    Stage2[Stage: kafka_stage]
     RawTbl[raw_events]
     ProcTbl[events_clean]
   end
 
   KTopic --> KConnector --> Parser --> Enricher --> Sink
-  Sink --> Stage
-  Stage -->|Snowpipe| RawTbl
+  Sink --> Stage2
+  Stage2 -->|Snowpipe| RawTbl
   RawTbl --> ProcTbl
 ```
 
@@ -122,13 +122,14 @@ flowchart TD
   Success[Success / Commit]
   RetryQueue[Retry Queue]
   DeadLetter[Dead-Letter Queue / Alert]
+  Alert[Notify / Dashboard]
 
   Ingest --> Transform --> Validate
   Validate -->|OK| Success
   Validate -->|Fail| RetryQueue
   RetryQueue -->|retry| Transform
   RetryQueue -->|max retries exceeded| DeadLetter
-  DeadLetter --> Alert[Notify / Dashboard]
+  DeadLetter --> Alert
 ```
 
 ---
