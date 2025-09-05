@@ -15,25 +15,25 @@ This file contains several Mermaid diagrams illustrating common Openflow pipelin
 
 ```mermaid
 flowchart TD
-  subgraph Sources
-    A1[Files: S3 / GCS / Blob]
-    A2[Databases: SQL Server / MySQL]
-    A3[APIs / SaaS (REST)]
-    A4[Streaming: Kafka / Kinesis]
+  subgraph S[Sources]
+    A1["Files - S3, GCS, Blob"]
+    A2["Databases - SQL Server, MySQL"]
+    A3["APIs / SaaS (REST)"]
+    A4["Streaming - Kafka, Kinesis"]
   end
 
-  subgraph Openflow
-    B1[Connector / Ingest]
-    B2[Processors / Transforms]
-    B3[Routing to Stage or Direct]
-    B4[Monitoring / Alerts]
+  subgraph O[Openflow Pipeline]
+    B1["Connector / Ingest"]
+    B2["Processors / Transforms"]
+    B3["Routing to Stage or Direct"]
+    B4["Monitoring / Alerts"]
   end
 
-  subgraph Snowflake
-    C1[Stage (internal / external)]
-    C2[Raw Tables / Streams]
-    C3[Transform (dbt / Tasks)]
-    C4[Analytics / BI / ML]
+  subgraph SF[Snowflake Target]
+    C1["Stage (internal / external)"]
+    C2["Raw Tables / Streams"]
+    C3["Transform (dbt / Tasks)"]
+    C4["Analytics / BI / ML"]
   end
 
   A1 --> B1
@@ -58,27 +58,27 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  subgraph OnPremDB
-    DCDC[(CDC Stream)]
+  subgraph OPDB[OLTP Database]
+    D1[(CDC Stream)]
   end
 
-  subgraph Openflow
-    OConn[CDC Connector]
-    OProc[Parse & Normalize]
-    OMunge[Dedup / Upsert Logic]
-    OToSnow[Write to Stage or Table]
+  subgraph OF[Openflow]
+    O1["CDC Connector"]
+    O2["Parse & Normalize"]
+    O3["Dedup / Upsert Logic"]
+    O4["Write to Stage / Table"]
   end
 
-  subgraph Snowflake
-    Stage1[Stage: db_cdc_stage]
-    Stream1[orders_stream (STREAM)]
-    Table1[orders (TABLE)]
+  subgraph SF2[Snowflake]
+    S1["Stage - db_cdc_stage"]
+    S2["Stream - orders_stream"]
+    S3["Table - orders"]
   end
 
-  DCDC --> OConn --> OProc --> OMunge --> OToSnow --> Stage1
-  Stage1 -->|COPY / Snowpipe| Table1
-  Table1 --> Stream1
-  Stream1 -->|MERGE| Table1
+  D1 --> O1 --> O2 --> O3 --> O4 --> S1
+  S1 -->|COPY or Snowpipe| S3
+  S3 --> S2
+  S2 -->|MERGE| S3
 ```
 
 ---
@@ -87,27 +87,27 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph KafkaCluster
-    KTopic[(kafka.topic.events)]
+  subgraph KAFKA[Kafka Cluster]
+    K1[(kafka.topic.events)]
   end
 
-  subgraph Openflow
-    KConnector[Kafka Connector]
-    Parser[JSON Parser / Schema Registry]
-    Enricher[Enrichment / Lookup]
-    Sink[Snowflake Sink (Stream / Table)]
+  subgraph OF2[Openflow]
+    Oa["Kafka Connector"]
+    Ob["JSON Parser / Schema Registry"]
+    Oc["Enrichment / Lookup"]
+    Od["Snowflake Sink"]
   end
 
-  subgraph Snowflake
-    Stage2[Stage: kafka_stage]
-    RawTbl[raw_events]
-    ProcTbl[events_clean]
+  subgraph SF3[Snowflake]
+    T1["Stage - kafka_stage"]
+    T2["Raw Table - raw_events"]
+    T3["Processed - events_clean"]
   end
 
-  KTopic --> KConnector --> Parser --> Enricher --> Sink
-  Sink --> Stage2
-  Stage2 -->|Snowpipe| RawTbl
-  RawTbl --> ProcTbl
+  K1 --> Oa --> Ob --> Oc --> Od
+  Od --> T1
+  T1 -->|Snowpipe| T2
+  T2 --> T3
 ```
 
 ---
@@ -116,20 +116,20 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  Ingest[Ingest Task]
-  Transform[Transform Step]
-  Validate[Validation]
-  Success[Success / Commit]
-  RetryQueue[Retry Queue]
-  DeadLetter[Dead-Letter Queue / Alert]
-  Alert[Notify / Dashboard]
+  I["Ingest Task"]
+  X["Transform Step"]
+  V["Validation"]
+  S["Success / Commit"]
+  RQ["Retry Queue"]
+  DLQ["Dead-Letter Queue"]
+  AL["Alert / Dashboard"]
 
-  Ingest --> Transform --> Validate
-  Validate -->|OK| Success
-  Validate -->|Fail| RetryQueue
-  RetryQueue -->|retry| Transform
-  RetryQueue -->|max retries exceeded| DeadLetter
-  DeadLetter --> Alert
+  I --> X --> V
+  V -->|OK| S
+  V -->|Fail| RQ
+  RQ -->|retry| X
+  RQ -->|max retries reached| DLQ
+  DLQ --> AL
 ```
 
 ---
