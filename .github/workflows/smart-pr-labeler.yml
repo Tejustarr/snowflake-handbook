@@ -1,13 +1,14 @@
 name: Smart PR Labeler (change-type + content-type)
 
 on:
+  # run in repository context so the token has write permissions
   pull_request_target:
     types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   smart-label:
@@ -54,11 +55,10 @@ jobs:
               if (st === "changed") changeLabels.add("modified");
             }
 
-            // Determine content-type labels from file paths/extensions
+            // Determine content-type labels
             const contentLabels = new Set();
             for (const f of allFiles) {
               const p = (f.filename || "").toLowerCase();
-
               if (p.endsWith(".md") || p.startsWith("docs/") || p.includes("/docs/")) contentLabels.add("docs");
               if (p.endsWith(".sql")) contentLabels.add("sql");
               if (p.endsWith(".py") || p.endsWith(".ipynb")) contentLabels.add("python");
