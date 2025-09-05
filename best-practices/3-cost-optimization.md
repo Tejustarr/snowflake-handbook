@@ -1,7 +1,7 @@
-# Cost Optimization
+# Cost Optimization Best Practices
 
-*(short description of Cost Optimization)*
-
-## Key points
-- Point 1
-- Point 2
+- ✅ Enable **auto-suspend/auto-resume** for all warehouses.  
+- ✅ Start with **XS or Small warehouses**.  
+- ✅ Use **resource monitors** to cap usage.  
+- ✅ Drop old clones, unused streams, and temporary objects.  
+- ✅ Shorten **Time Travel retention** if not needed.  
