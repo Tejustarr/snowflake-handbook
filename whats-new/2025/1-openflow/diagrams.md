@@ -6,7 +6,8 @@ This file contains several Mermaid diagrams illustrating common Openflow pipelin
 - Streaming (Kafka → Snowflake) pipeline
 - Error handling & retry flow
 
-> **Note:** GitHub supports Mermaid rendering in Markdown. The diagrams below are in fenced ```mermaid``` blocks and will render on GitHub's web UI.
+> **Note:** GitHub renders Mermaid in Markdown on the web UI.  
+> If you open this locally, you may see the raw code unless your editor supports Mermaid.
 
 ---
 
@@ -14,22 +15,22 @@ This file contains several Mermaid diagrams illustrating common Openflow pipelin
 
 ```mermaid
 flowchart TD
-  subgraph Sources [Data Sources]
+  subgraph Sources
     A1[Files (S3 / GCS / Blob)]
     A2[Databases (SQL Server / MySQL)]
     A3[APIs / SaaS (REST)]
     A4[Streaming (Kafka / Kinesis)]
   end
 
-  subgraph Openflow [Openflow Pipeline]
+  subgraph Openflow
     B1[Connector / Ingest]
     B2[Processors / Transforms]
     B3[Routing (to Stage or Direct)]
     B4[Monitoring / Alerts]
   end
 
-  subgraph Snowflake [Snowflake Target]
-    C1[Stage (internal/external)]
+  subgraph Snowflake
+    C1[Stage (internal / external)]
     C2[Raw Tables / Streams]
     C3[Transform (dbt / Tasks)]
     C4[Analytics / BI / ML]
@@ -51,28 +52,26 @@ flowchart TD
   B4 -.-> C4
 ```
 
-**Explanation:** Sources feed Openflow connectors. Data is processed, routed to a stage or directly into raw tables/streams in Snowflake, then transformed (e.g., dbt/Tasks) and consumed by analytics or ML.
-
 ---
 
 ## 2. CDC Pipeline (Database → Snowflake via Openflow)
 
 ```mermaid
 flowchart LR
-  subgraph OnPremDB [OLTP DB (SQL Server)]
+  subgraph OnPremDB
     DCDC[(CDC Stream)]
   end
 
   subgraph Openflow
     OConn[CDC Connector]
-    OProc[Debezium-like Parse & Normalize]
+    OProc[Parse & Normalize]
     OMunge[Dedup / Upsert Logic]
-    OToSnow[Write to Stage / Table]
+    OToSnow[Write to Stage or Table]
   end
 
   subgraph Snowflake
-    SStage[@db_cdc_stage]
-    SStream[orders_stream (STREAM)]
+    SStage["@db_cdc_stage"]
+    SStream["orders_stream (STREAM)"]
     STable[orders (TABLE)]
   end
 
@@ -81,8 +80,6 @@ flowchart LR
   STable --> SStream
   SStream -->|MERGE| STable
 ```
-
-**Explanation:** Openflow reads DB CDC (transaction logs), normalizes events, writes to a stage (or directly), then Snowflake ingests (COPY/Snowpipe) and an internal stream + MERGE apply changes to the final table.
 
 ---
 
@@ -98,11 +95,11 @@ flowchart TB
     KConnector[Kafka Connector]
     Parser[JSON Parser / Schema Registry]
     Enricher[Enrichment / Lookup]
-    Sink[Snowflake Sink (Stream/Table)]
+    Sink[Snowflake Sink (Stream / Table)]
   end
 
   subgraph Snowflake
-    Stage[@kafka_stage]
+    Stage["@kafka_stage"]
     RawTbl[raw_events]
     ProcTbl[events_clean]
   end
@@ -113,8 +110,6 @@ flowchart TB
   RawTbl --> ProcTbl
 ```
 
-**Explanation:** A streaming source (Kafka) connects to Openflow, which parses and enriches events and pushes them into Snowflake (via stage + Snowpipe or direct sink), where downstream transforms produce clean tables for analytics.
-
 ---
 
 ## 4. Error Handling & Retry Flow
@@ -124,41 +119,30 @@ flowchart TD
   Ingest[Ingest Task]
   Transform[Transform Step]
   Validate[Validation]
-  Success[Success -> Commit]
-  Retry[Retry Queue]
+  Success[Success / Commit]
+  RetryQueue[Retry Queue]
   DeadLetter[Dead-Letter Queue / Alert]
 
   Ingest --> Transform --> Validate
   Validate -->|OK| Success
-  Validate -->|Fail| Retry
-  Retry -->|max_retries_exceeded| DeadLetter
-  Retry --> Transform
+  Validate -->|Fail| RetryQueue
+  RetryQueue -->|retry| Transform
+  RetryQueue -->|max retries exceeded| DeadLetter
   DeadLetter --> Alert[Notify / Dashboard]
 ```
 
-**Explanation:** Typical pipeline control flow with validation, retry logic and dead-lettering. Openflow provides built-in retry/backoff and monitoring hooks to reprocess or alert on poisoned records.
-
 ---
 
-## 5. Optional: Dev/Test vs Prod Flow (Environment Isolation)
+## Plain-text fallback (if Mermaid doesn’t render)
 
-```mermaid
-flowchart LR
-  Dev[Dev Openflow Instance] --> DevStage[@dev_stage] --> DevTable[dev_table]
-  Prod[Prod Openflow Instance] --> ProdStage[@prod_stage] --> ProdTable[prod_table]
+- **High-level flow:**  
+  Sources → Openflow (Connectors → Processors → Routing) → Snowflake (Stage → Raw Tables → Transforms) → Consumers (BI / ML)
 
-  Dev -. Test Changes .-> Prod
-  Prod -->|Monitoring| Ops[Alerts & Observability]
-```
+- **CDC flow:**  
+  DB CDC → Openflow → Stage → COPY/Snowpipe → Raw table → Stream + MERGE → Final table
 
-**Explanation:** Keep dev/test flows isolated from production; use cloning or branches for safe testing and apply CI/CD for flow deployments.
+- **Streaming flow:**  
+  Kafka → Openflow → Stage → Snowpipe → Raw table → Processed table
 
----
-
-## Notes & Tips
-- Keep diagrams **simple and layered**: Sources → Openflow → Snowflake → Consumers.  
-- Use **stages** for reliability (especially for large files or bursts) and **Snowpipe** for near-real-time loads.  
-- Represent error/retry paths explicitly — production pipelines need clear dead-letter handling and observability.  
-- Git-friendly: Save the Mermaid blocks in Markdown files; GitHub will render them automatically in the repo viewer.
-
----
+- **Retry flow:**  
+  Ingest → Transform → Validate → (OK → Commit) / (Fail → Retry queue → Dead-letter + alert)
